@@ -2,7 +2,7 @@ version: "3"
 services:
   vpn:
     image: qmcgaw/gluetun
-    container_name: vpn
+    container_name: vpn-media-server
     cap_add:
       - NET_ADMIN
     devices:
@@ -54,7 +54,7 @@ services:
 
   flaresolverr:
       image: flaresolverr/flaresolverr
-      container_name: flaresolverr
+      container_name: flaresolverr-media-server
       network_mode: service:vpn
       restart: unless-stopped
       depends_on:
@@ -62,7 +62,7 @@ services:
     
   prowlarr:
     image: linuxserver/prowlarr
-    container_name: prowlarr
+    container_name: prowlarr-media-server
     environment:
       - PUID=1000
       - PGID=1000
@@ -79,7 +79,7 @@ services:
     
   qbittorrent:
     image: linuxserver/qbittorrent:latest
-    container_name: qbittorrent
+    container_name: qbittorrent-media-server
     privileged: true   
     environment:
       - VPN_USERNAME=BZJJdEtFe9Or0jUC
@@ -101,7 +101,7 @@ services:
     
   radarr:
     image: linuxserver/radarr
-    container_name: radarr
+    container_name: radarr-media-server
     environment:
       - PUID=1000
       - PGID=1000
@@ -122,7 +122,7 @@ services:
     
   sonarr:
     image: linuxserver/sonarr
-    container_name: sonarr
+    container_name: sonarr-media-server
     environment:
       - PUID=1000
       - PGID=1000
@@ -142,7 +142,7 @@ services:
 
   bazarr:
     image: lscr.io/linuxserver/bazarr:latest
-    container_name: bazarr
+    container_name: bazarr-media-server
     environment:
       - PUID=1000
       - PGID=1000
@@ -158,7 +158,7 @@ services:
 
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
-    container_name: homepage
+    container_name: homepage-media-server
     network_mode: service:vpn
     restart: unless-stopped
     volumes:
