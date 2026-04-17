@@ -1,0 +1,168 @@
+version: "3"
+services:
+  vpn:
+    image: qmcgaw/gluetun
+    container_name: vpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun 
+    ports:
+      - 8888:8888/tcp # HTTP proxy
+      - 8388:8388/tcp # Shadowsocks
+      - 8388:8388/udp # Shadowsocks
+      - 8090:8090 # qbittorrent Web UI
+      - 8080:8080 # qbittorrent Web UI
+      - 6881:6881 # qbittorrent
+      - 6881:6881/udp # qbittorrent
+      - 8389:8389/udp # Gluetun-Shadowsocks?
+      - 8389:8389/tcp # Gluetun-Shadowsocks?
+      - 8889:8889/tcp # Gluetun
+      - 9696:9696 # prowlarr
+      - 8989:8989 # sonarr
+      - 7878:7878 # radarr
+      - 6767:6767 # bazarr
+      - 8191:8191 # flaresolverr
+      - 80:3001 # homepage
+    volumes:
+      - /media/storage/Configs/QBittorrentVPN:/gluetun
+    environment:
+      - VPNSP=protonvpn
+      - OPENVPN_USER=BZJJdEtFe9Or0jUC
+      - OPENVPN_PASSWORD=rQg21dawrQPsGK69xyxWcckxLXzMNUB4
+      - SERVER_COUNTRIES=Australia
+      # Timezone for accurate log times
+      - TZ=Australia/Adelaide
+    restart: unless-stopped
+
+  # jellyfin:
+  #   image: jellyfin/jellyfin
+  #   container_name: jellyfin
+  #   network_mode: host
+  #   environment:
+  #     - TZ=Australia/Adelaide
+  #     - PUID=1000
+  #     - PGID=1000
+  #     - VERSION=docker
+  #   volumes:
+  #     - /media/storage/Configs:/config
+  #     - /media/storage/Cache:/cache
+  #     - /media/storage/TV:/tv
+  #     - /media/storage/Movies:/movies
+  #     - /media/external:/external
+  #   restart: unless-stopped
+
+  flaresolverr:
+      image: flaresolverr/flaresolverr
+      container_name: flaresolverr
+      network_mode: service:vpn
+      restart: unless-stopped
+      depends_on:
+        - vpn
+    
+  prowlarr:
+    image: linuxserver/prowlarr
+    container_name: prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Adelaide
+    volumes:
+      - /media/storage/Configs/Prowlarr:/config
+      - /media/storage/Torrents:/downloads
+    network_mode: service:vpn
+    restart: unless-stopped
+    depends_on:
+      - vpn
+      - qbittorrent
+      - flaresolverr
+    
+  qbittorrent:
+    image: linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    privileged: true   
+    environment:
+      - VPN_USERNAME=BZJJdEtFe9Or0jUC
+      - VPN_PASSWORD=rQg21dawrQPsGK69xyxWcckxLXzMNUB4
+      - PUID=1000
+      - PGID=1000
+      - WEBUI_PORT_ENV=8080
+      - INCOMING_PORT_ENV=8999
+      - LAN_NETWORK=192.168.1.125/24 #adjust this to YOUR network settings
+      - NAME_SERVERS=1.1.1.1,1.0.0.1 #you can use whatever DNS provider you want
+      - TZ=Australia/Adelaide
+    volumes:
+      - /media/storage/Configs/QBittorrentVPN:/config
+      - /media/storage/Torrents:/downloads
+    restart: unless-stopped
+    network_mode: service:vpn
+    depends_on:
+      - vpn
+    
+  radarr:
+    image: linuxserver/radarr
+    container_name: radarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Adelaide
+      - UMASK_SET=022 #optional
+    volumes:
+      - /media/storage/Configs/Radarr:/config
+      - /media/storage/Torrents:/downloads
+      - /media/storage/Movies:/Movies
+      - /media/external:/external
+    network_mode: service:vpn
+    restart: unless-stopped
+    depends_on:
+      - vpn
+      - qbittorrent
+      - prowlarr
+
+    
+  sonarr:
+    image: linuxserver/sonarr
+    container_name: sonarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Australia/Adelaide
+      - UMASK_SET=022
+    volumes:
+      - /media/storage/Configs/Sonarr:/config
+      - /media/storage/Torrents:/downloads
+      - /media/storage/TV:/TV
+      - /media/external:/external
+    network_mode: service:vpn
+    restart: unless-stopped
+    depends_on:
+      - vpn
+      - qbittorrent
+      - prowlarr
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+    volumes:
+      - /path/to/bazarr/config:/config
+      - /media/external:/external
+    network_mode: service:vpn
+    restart: unless-stopped
+    depends_on:
+      - vpn
+      - qbittorrent
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    network_mode: service:vpn
+    restart: unless-stopped
+    volumes:
+      - /media/storage/Configs/Homepage:/app/config # Make sure your local config directory exists
+      - /var/run/docker.sock:/var/run/docker.sock # (optional) For docker integrations
+    environment:
+      HOMEPAGE_ALLOWED_HOSTS: gethomepage.dev,192.168.1.125:80,192.168.1.125,localhost:80,localhost,jellyfin:80,jellyfin,jellyfin.bambino-koi.ts.net:80,jellyfin.bambino-koi.ts.net # required, may need port. See gethomepage.dev/installation/#homepage_allowed_hosts
