@@ -23,7 +23,7 @@ services:
       - 7878:7878 # radarr
       - 6767:6767 # bazarr
       - 8191:8191 # flaresolverr
-      - 80:3001 # homepage
+      - 3001:3000 # homepage
     volumes:
       - /media/storage/Configs/QBittorrentVPN:/gluetun
     environment:
